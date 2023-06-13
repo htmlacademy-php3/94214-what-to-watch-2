@@ -2,43 +2,81 @@
 
 namespace App\Models;
 
-// use Illuminate\Contracts\Auth\MustVerifyEmail;
+use Illuminate\Contracts\Auth\Authenticatable;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
-use Illuminate\Foundation\Auth\User as Authenticatable;
+use Illuminate\Database\Eloquent\Model;
 use Illuminate\Notifications\Notifiable;
 use Laravel\Sanctum\HasApiTokens;
 
-class User extends Authenticatable
+class User extends Model implements Authenticatable
 {
-    use HasApiTokens, HasFactory, Notifiable;
+    use \Illuminate\Auth\Authenticatable;
+    use HasFactory;
+    use Notifiable;
+    use HasApiTokens;
+
+    public const ROLE_USER = 'user';
+    public const ROLE_MODERATOR = 'moderator';
 
     /**
-     * The attributes that are mass assignable.
+     * Атрибуты, которые можно массово присваивать.
      *
-     * @var array<int, string>
+     * @var array<string>
      */
     protected $fillable = [
         'name',
         'email',
         'password',
+        'avatar',
+        'role',
     ];
 
     /**
-     * The attributes that should be hidden for serialization.
+     * Скрытые атрибуты.
      *
-     * @var array<int, string>
+     * @var array<int,string>
      */
     protected $hidden = [
         'password',
-        'remember_token',
     ];
 
     /**
-     * The attributes that should be cast.
+     * Отношение "многие ко многим" к модели Film (избранные фильмы пользователя).
      *
-     * @var array<string, string>
+     * @return \Illuminate\Database\Eloquent\Relations\BelongsToMany
      */
-    protected $casts = [
-        'email_verified_at' => 'datetime',
-    ];
+    public function favoriteFilms()
+    {
+        return $this->belongsToMany(Film::class, 'user_favorites');
+    }
+
+    /**
+     * Отношение "один ко многим" к модели Comment (комментарии пользователя).
+     *
+     * @return \Illuminate\Database\Eloquent\Relations\HasMany
+     */
+    public function comments()
+    {
+        return $this->hasMany(Comment::class);
+    }
+
+    /**
+     * Проверяет, является ли пользователь модератором.
+     *
+     * @return bool
+     */
+    public function isModerator(): bool
+    {
+        return $this->role === self::ROLE_MODERATOR;
+    }
+
+    /**
+     * Проверяет, находится ли фильм в избранном у пользователя.
+     *
+     * @return bool
+     */
+    public function hasFavorite($filmId): bool
+    {
+        return $this->favoriteFilms()->where('film_id', $filmId)->exists();
+    }
 }

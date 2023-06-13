@@ -2,7 +2,14 @@
 
 namespace App\Exceptions;
 
+use App\Http\Responses\FailResponse;
+use Illuminate\Auth\AuthenticationException;
+use Illuminate\Database\Eloquent\ModelNotFoundException;
 use Illuminate\Foundation\Exceptions\Handler as ExceptionHandler;
+use Illuminate\Http\JsonResponse;
+use Illuminate\Validation\ValidationException;
+use Symfony\Component\HttpFoundation\Response;
+use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
 use Throwable;
 
 class Handler extends ExceptionHandler
@@ -44,5 +51,41 @@ class Handler extends ExceptionHandler
         $this->reportable(function (Throwable $e) {
             //
         });
+    }
+
+    protected function unauthenticated($request, AuthenticationException $exception)
+    {
+        return $request->expectsJson()
+        ? response()->json([
+            'message' => 'Запрос требует аутентификации.',
+        ], Response::HTTP_UNAUTHORIZED)
+        : redirect()->guest($exception->redirectTo() ?? route('login'));
+    }
+
+    public function render($request, Throwable $exception)
+    {
+        if ($request->expectsJson()) {
+            if ($exception instanceof NotFoundHttpException || $exception instanceof ModelNotFoundException) {
+                return response()->json([
+                    'message' => 'Запрашиваемая страница не существует.',
+                ], Response::HTTP_NOT_FOUND);
+            }
+
+            if ($exception instanceof ValidationException) {
+                $errors = $exception->errors();
+                $response = [
+                    'message' => 'Переданные данные не корректны.',
+                    'errors' => $errors,
+                ];
+                return response()->json($response, Response::HTTP_UNPROCESSABLE_ENTITY);
+            }
+        }
+
+        return parent::render($request, $exception);
+    }
+
+    protected function prepareJsonResponse($request, Throwable $e): JsonResponse
+    {
+        return (new FailResponse($e->getMessage(), $e->getCode() ?: Response::HTTP_INTERNAL_SERVER_ERROR, $e))->toResponse($request);
     }
 }

@@ -1,0 +1,13 @@
+{
+    "pre-commit": {
+        "enabled": true,
+        "actions": [
+            {
+                "action": "php ./vendor/bin/pint"
+            },
+            {
+                "action": "php ./vendor/bin/phpstan analyse"
+            }
+        ]
+    }
+}
