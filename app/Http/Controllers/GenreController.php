@@ -2,11 +2,10 @@
 
 namespace App\Http\Controllers;
 
-use App\Models\Genre;
+use App\Http\Requests\GenreRequest;
 use App\Http\Responses\BaseResponse;
 use App\Http\Responses\SuccessResponse;
-use App\Http\Responses\FailResponse;
-use App\Http\Requests\GenreRequest;
+use App\Models\Genre;
 
 class GenreController extends Controller
 {
@@ -17,13 +16,8 @@ class GenreController extends Controller
      */
     public function index(): BaseResponse
     {
-        try {
-            $genres = Genre::all();
-
-            return new SuccessResponse($genres);
-        } catch (\Exception $e) {
-            return new FailResponse(null, null, $e);
-        }
+        $genres = Genre::all();
+        return new SuccessResponse($genres);
     }
 
     /**
@@ -33,14 +27,9 @@ class GenreController extends Controller
      */
     public function update(GenreRequest $request, Genre $genre): BaseResponse
     {
-        try {
-            $genre->update([
-                'name' => $request->input('name'),
-            ]);
-
-            return new SuccessResponse($genre);
-        } catch (\Exception $e) {
-            return new FailResponse(null, null, $e);
-        }
+        $genre->update([
+            'name' => $request->input('name'),
+        ]);
+        return new SuccessResponse($genre);
     }
 }

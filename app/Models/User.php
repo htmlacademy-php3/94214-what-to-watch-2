@@ -69,4 +69,14 @@ class User extends Model implements Authenticatable
     {
         return $this->role === self::ROLE_MODERATOR;
     }
+
+    /**
+     * Проверяет, находится ли фильм в избранном у пользователя.
+     *
+     * @return bool
+     */
+    public function hasFavorite($filmId): bool
+    {
+        return $this->favoriteFilms()->where('film_id', $filmId)->exists();
+    }
 }

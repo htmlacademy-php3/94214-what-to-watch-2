@@ -5,8 +5,8 @@ namespace App\Http\Controllers;
 use App\Http\Responses\BaseResponse;
 use App\Http\Responses\FailResponse;
 use App\Http\Responses\SuccessResponse;
-use App\Models\User;
 use App\Models\Film;
+use App\Models\User;
 use Illuminate\Support\Facades\Auth;
 use Symfony\Component\HttpFoundation\Response;
 
@@ -19,15 +19,11 @@ class FavoriteController extends Controller
      */
     public function index(): BaseResponse
     {
-        try {
-            /** @var User $user */
-            $user = Auth::user();
-            $favoriteFilms = $user->favoriteFilms()->orderBy('created_at', 'desc')->get();
+        /** @var User $user */
+        $user = Auth::user();
+        $favoriteFilms = $user->favoriteFilms()->orderBy('created_at', 'desc')->get();
 
-            return new SuccessResponse($favoriteFilms);
-        } catch (\Exception $e) {
-            return new FailResponse(null, null, $e);
-        }
+        return new SuccessResponse($favoriteFilms);
     }
 
     /**
@@ -37,20 +33,16 @@ class FavoriteController extends Controller
      */
     public function store(Film $film): BaseResponse
     {
-        try {
-            /** @var User $user */
-            $user = Auth::user();
+        /** @var User $user */
+        $user = Auth::user();
 
-            if ($user->favoriteFilms()->where('film_id', $film->id)->exists()) {
-                return new FailResponse('Фильм уже в избранном', Response::HTTP_UNPROCESSABLE_ENTITY);
-            }
-
-            $user->favoriteFilms()->attach($film);
-
-            return new SuccessResponse();
-        } catch (\Exception $e) {
-            return new FailResponse(null, null, $e);
+        if ($user->hasFavorite($film->id)) {
+            return new FailResponse('Фильм уже в избранном', Response::HTTP_UNPROCESSABLE_ENTITY);
         }
+
+        $user->favoriteFilms()->attach($film);
+
+        return new SuccessResponse();
     }
 
     /**
@@ -60,19 +52,15 @@ class FavoriteController extends Controller
      */
     public function destroy(Film $film): BaseResponse
     {
-        try {
-            /** @var User $user */
-            $user = Auth::user();
+        /** @var User $user */
+        $user = Auth::user();
 
-            if (!$user->favoriteFilms()->where('film_id', $film->id)->exists()) {
-                return new FailResponse('Фильм не найден в избранном', Response::HTTP_UNPROCESSABLE_ENTITY);
-            }
-
-            $user->favoriteFilms()->detach($film);
-
-            return new SuccessResponse();
-        } catch (\Exception $e) {
-            return new FailResponse(null, null, $e);
+        if (!$user->hasFavorite($film->id)) {
+            return new FailResponse('Фильм не найден в избранном', Response::HTTP_UNPROCESSABLE_ENTITY);
         }
+
+        $user->favoriteFilms()->detach($film);
+
+        return new SuccessResponse();
     }
 }

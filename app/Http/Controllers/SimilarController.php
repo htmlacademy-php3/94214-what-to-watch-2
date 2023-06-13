@@ -3,7 +3,6 @@
 namespace App\Http\Controllers;
 
 use App\Http\Responses\BaseResponse;
-use App\Http\Responses\FailResponse;
 use App\Http\Responses\SuccessResponse;
 use App\Models\Film;
 use Symfony\Component\HttpFoundation\Response;
@@ -18,32 +17,26 @@ class SimilarController extends Controller
      */
     public function index(Film $film): BaseResponse
     {
-        try {
-            $status = Film::STATUS_READY;
-            $similarFilmsCount = 4;
-            $filmGenres = $film->genres->pluck('id');
+        $status = Film::STATUS_READY;
+        $similarFilmsCount = 4;
+        $filmGenres = $film->genres->pluck('id');
 
-            $allSimilarFilms = Film::where('status', $status)
-                ->where('id', '!=', $film->id)
-                ->whereHas('genres', function ($query) use ($filmGenres) {
-                    $query->whereIn('genres.id', $filmGenres);
-                })
-                ->get();
+        $similarFilms = Film::where('status', $status)
+            ->where('id', '!=', $film->id)
+            ->whereHas('genres', function ($query) use ($filmGenres) {
+                $query->whereIn('genres.id', $filmGenres);
+            })
+            ->withCount(['genres as genres_count' => function ($query) use ($filmGenres) {
+                $query->whereIn('genres.id', $filmGenres);
+            }])
+            ->orderByDesc('genres_count')
+            ->limit($similarFilmsCount)
+            ->get();
 
-            $allSimilarFilms = $allSimilarFilms->sortByDesc(function ($similarFilm) use ($filmGenres) {
-                return $similarFilm->genres->whereIn('id', $filmGenres)->count();
-            })->values();
-
-            $similarFilms = $allSimilarFilms->take($similarFilmsCount);
-
-            if ($similarFilms->isEmpty()) {
-                return new SuccessResponse(null, Response::HTTP_NO_CONTENT);
-            }
-
-            return new SuccessResponse($similarFilms);
-        } catch (\Exception $e) {
-            return new FailResponse(null, null, $e);
+        if ($similarFilms->isEmpty()) {
+            return new SuccessResponse(null, Response::HTTP_NO_CONTENT);
         }
-    }
 
+        return new SuccessResponse($similarFilms);
+    }
 }

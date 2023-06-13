@@ -2,12 +2,14 @@
 
 namespace App\Jobs;
 
+use App\Models\Comment;
 use App\Models\Film;
 use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Bus\Dispatchable;
 use Illuminate\Queue\InteractsWithQueue;
 use Illuminate\Queue\SerializesModels;
+use Illuminate\Support\Facades\Http;
 
 class UpdateCommentsForAllFilmJob implements ShouldQueue
 {
@@ -23,12 +25,27 @@ class UpdateCommentsForAllFilmJob implements ShouldQueue
      */
     public function handle()
     {
-        $delayTime = 0;
-        $intervalInSeconds = 3;
+        $lastCommentDate = Comment::getLastExternalCommentDate();
 
-        Film::all()->each(function ($film) use (&$delayTime, $intervalInSeconds) {
-            UpdateCommentsForFilmJob::dispatch($film)->delay(now()->addSeconds($delayTime));
-            $delayTime += $intervalInSeconds;
-        });
+        $params = [];
+        if ($lastCommentDate) {
+            $params['after'] = $lastCommentDate;
+        }
+
+        $response = Http::get('http://guide.phpdemo.ru/api/comments', $params);
+
+        if ($response->successful()) {
+            $newComments = $response->json();
+
+            $filmsWithNewComments = Film::whereIn('imdb_id', array_column($newComments, 'imdb_id'))->get();
+
+            $filmsWithNewComments->each(function ($film) use ($newComments) {
+                $commentsForThisFilm = array_filter($newComments, function ($comment) use ($film) {
+                    return $comment['imdb_id'] == $film->imdb_id;
+                });
+
+                UpdateCommentsForFilmJob::dispatch($film, $commentsForThisFilm);
+            });
+        }
     }
 }

@@ -31,8 +31,15 @@ return [
         'region' => env('AWS_DEFAULT_REGION', 'us-east-1'),
     ],
 
+    'academy' => [
+        'base_url' => env('ACADEMY_BASE_URL'),
+        'caching_time' => env('MOVIE_CACHING_TIME'),
+    ],
+
     'omdb' => [
+        'base_url' => env('OMDB_BASE_URL'),
         'api_key' => env('OMDB_API_KEY'),
+        'caching_time' => env('MOVIE_CACHING_TIME'),
     ],
 
 ];

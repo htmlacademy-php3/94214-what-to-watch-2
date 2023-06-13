@@ -2,12 +2,21 @@
 
 namespace App\Services\MovieService;
 
+use Carbon\Carbon;
 use App\DTO\FilmData;
 use Illuminate\Support\Facades\Http;
+use Illuminate\Support\Facades\Cache;
 
 class MovieAcademyRepository implements MovieRepositoryInterface
 {
-    private string $baseUrl = 'http://guide.phpdemo.ru/api/films/';
+    private string $baseUrl;
+    private int $cachingTime;
+
+    public function __construct()
+    {
+        $this->baseUrl = config('services.academy.base_url');
+        $this->cachingTime = (int)config('services.academy.caching_time');
+    }
 
     /**
      * Находит фильм по его IMDB ID.
@@ -17,6 +26,12 @@ class MovieAcademyRepository implements MovieRepositoryInterface
      */
     public function findMovieById(string $imdbId): ?array
     {
+        $cacheKey = 'movie_'.$imdbId;
+
+        if (Cache::has($cacheKey)) {
+            return Cache::get($cacheKey);
+        }
+
         $response = Http::get($this->baseUrl . $imdbId);
 
         if (!$response->successful()) {
@@ -42,7 +57,10 @@ class MovieAcademyRepository implements MovieRepositoryInterface
         $filmData->video_link = $movieData['video'] ?? null;
         $filmData->preview_video_link = $movieData['preview'] ?? null;
 
-        return $filmData->toArray();
-    }
+        $data = $filmData->toArray();
+        $cachingTimeCarbon = Carbon::now()->addSeconds($this->cachingTime);
+        Cache::put($cacheKey, $data, $cachingTimeCarbon);
 
+        return $data;
+    }
 }

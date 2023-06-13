@@ -2,13 +2,13 @@
 
 namespace App\Http\Controllers;
 
-use App\Models\User;
+use App\Http\Requests\UpdateUserRequest;
 use App\Http\Responses\BaseResponse;
 use App\Http\Responses\SuccessResponse;
-use App\Http\Responses\FailResponse;
-use App\Http\Requests\UpdateUserRequest;
-use Illuminate\Support\Facades\Hash;
+use App\Models\User;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\Storage;
 
 class UserController extends Controller
 {
@@ -19,14 +19,10 @@ class UserController extends Controller
      */
     public function show(): BaseResponse
     {
-        try {
-            $user = Auth::user();
-            return new SuccessResponse([
-                'user' => $user,
-            ]);
-        } catch (\Exception $e) {
-            return new FailResponse(null, null, $e);
-        }
+        $user = Auth::user();
+        return new SuccessResponse([
+            'user' => $user,
+        ]);
     }
 
     /**
@@ -36,31 +32,33 @@ class UserController extends Controller
      */
     public function update(UpdateUserRequest $request): BaseResponse
     {
-        try {
-            /** @var User|null $user */
-            $user = Auth::user();
-            $data = [
-                'email' => $request->input('email'),
-                'name' => $request->input('name'),
-            ];
+        /** @var User|null $user */
+        $user = Auth::user();
+        $data = [
+            'email' => $request->input('email'),
+            'name' => $request->input('name'),
+        ];
 
-            if ($request->has('password')) {
-                $data['password'] = Hash::make($request->input('password'));
-            }
-
-            if ($request->hasFile('avatar')) {
-                $file = $request->file('avatar');
-                $path = $file->store('public/avatars', 'local');
-                $data['avatar'] = $path;
-            }
-
-            $user->update($data);
-
-            return new SuccessResponse([
-                'user' => $user,
-            ]);
-        } catch (\Exception $e) {
-            return new FailResponse(null, null, $e);
+        if ($request->has('password')) {
+            $data['password'] = Hash::make($request->input('password'));
         }
+
+        $oldAvatar = null;
+        if ($request->hasFile('avatar')) {
+            $newAvatar = $request->file('avatar');
+            $oldAvatar = $user->avatar;
+            $filename = $newAvatar->store('public/avatars', 'local');
+            $data['avatar'] = $filename;
+        }
+
+        $user->update($data);
+
+        if ($oldAvatar) {
+            Storage::delete($oldAvatar);
+        }
+
+        return new SuccessResponse([
+            'user' => $user,
+        ]);
     }
 }

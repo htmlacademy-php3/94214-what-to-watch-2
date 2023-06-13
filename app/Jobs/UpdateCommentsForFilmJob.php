@@ -10,7 +10,6 @@ use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Bus\Dispatchable;
 use Illuminate\Queue\InteractsWithQueue;
 use Illuminate\Queue\SerializesModels;
-use Illuminate\Support\Facades\Http;
 
 class UpdateCommentsForFilmJob implements ShouldQueue
 {
@@ -22,7 +21,7 @@ class UpdateCommentsForFilmJob implements ShouldQueue
     /**
      * Конструктор класса UpdateCommentsForFilmJob.
      */
-    public function __construct(protected Film $film)
+    public function __construct(protected Film $film, protected array $newComments)
     {
     }
 
@@ -33,33 +32,15 @@ class UpdateCommentsForFilmJob implements ShouldQueue
      */
     public function handle(): void
     {
-        $lastCommentDate = $this->film->comments()->where('is_external', true)->max('created_at');
+        foreach ($this->newComments as $commentData) {
+            $commentDate = Carbon::parse($commentData['date']);
 
-        $params = ['imdb_id' => $this->film->imdb_id];
-        if ($lastCommentDate) {
-            $lastCommentDate = Carbon::parse($lastCommentDate);
-            $params['date'] = $lastCommentDate->format('Y-m-d');
-        }
-
-        $response = Http::get('http://guide.phpdemo.ru/api/comments', $params);
-
-        if ($response->successful()) {
-            $comments = $response->json();
-
-            foreach ($comments as $commentData) {
-                $commentDate = Carbon::parse($commentData['date']);
-                if ($lastCommentDate && $commentDate->lte($lastCommentDate)) {
-                    continue;
-                }
-
-                Comment::create([
-                    'film_id' => $this->film->id,
-                    'text' => $commentData['text'],
-                    'created_at' => $commentDate,
-                    'is_external' => true,
-                ]);
-            }
+            Comment::create([
+                'film_id' => $this->film->id,
+                'text' => $commentData['text'],
+                'created_at' => $commentDate,
+                'is_external' => true,
+            ]);
         }
     }
-
 }

@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use Carbon\Carbon;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 
@@ -98,5 +99,17 @@ class Comment extends Model
             return $this::ANONYMOUS_NAME;
         }
         return $this->user->name;
+    }
+
+    /**
+     * Получает дату последнего внешнего комментария.
+     *
+     * @return Carbon|null
+     */
+    public static function getLastExternalCommentDate(): ?Carbon
+    {
+        $lastCommentDate = self::where('is_external', true)->max('created_at');
+
+        return $lastCommentDate ? Carbon::parse($lastCommentDate) : null;
     }
 }

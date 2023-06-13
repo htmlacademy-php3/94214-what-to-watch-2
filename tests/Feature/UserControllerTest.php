@@ -43,6 +43,25 @@ class UserControllerTest extends TestCase
     }
 
     /**
+     * Тестирование обновления данных пользователя гостем.
+     */
+    public function testUpdateUserDataByGuest(): void
+    {
+        $newName = 'Новое имя';
+        $newEmail = 'newemail@mail.ru';
+
+        $response = $this->patchJson('/api/user', [
+            'name' => $newName,
+            'email' => $newEmail,
+        ]);
+
+        $response->assertStatus(Response::HTTP_UNAUTHORIZED);
+        $response->assertJson([
+            'message' => 'Запрос требует аутентификации.',
+        ]);
+    }
+
+    /**
      * Тестирование обновления данных пользователя.
      */
     public function testUpdateUserData(): void
