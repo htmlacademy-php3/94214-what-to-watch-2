@@ -26,6 +26,7 @@ class CommentRequest extends FormRequest
         return [
             'text' => 'required|string|min:50|max:400',
             'rating' => 'required|integer|min:1|max:10',
+            'comment_id' => 'nullable|exists:comments,id',
         ];
     }
 }

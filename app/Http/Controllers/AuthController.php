@@ -19,21 +19,17 @@ class AuthController extends Controller
      */
     public function login(LoginRequest $request): BaseResponse
     {
-        try {
-            if (!Auth::guard('web')->attempt($request->validated())) {
-                abort(Response::HTTP_UNAUTHORIZED, trans('auth.failed'));
-            }
-
-            /** @var User $user */
-            $user = Auth::user();
-            $token = $user->createToken('auth_token')->plainTextToken;
-
-            return new SuccessResponse([
-                'token' => $token,
-            ]);
-        } catch (\Exception $e) {
-            return new FailResponse(null, null, $e);
+        if (!Auth::guard('web')->attempt($request->validated())) {
+            return new FailResponse(trans('auth.failed'), Response::HTTP_UNAUTHORIZED);
         }
+
+        /** @var User $user */
+        $user = Auth::user();
+        $token = $user->createToken('auth_token')->plainTextToken;
+
+        return new SuccessResponse([
+            'token' => $token,
+        ]);
     }
 
     /**
@@ -43,14 +39,10 @@ class AuthController extends Controller
      */
     public function logout(): BaseResponse
     {
-        try {
-            /** @var User $user */
-            $user = Auth::user();
-            $user->tokens()->delete();
+        /** @var User $user */
+        $user = Auth::user();
+        $user->tokens()->delete();
 
-            return new SuccessResponse(null, Response::HTTP_NO_CONTENT);
-        } catch (\Exception $e) {
-            return new FailResponse(null, null, $e);
-        }
+        return new SuccessResponse(null, Response::HTTP_NO_CONTENT);
     }
 }

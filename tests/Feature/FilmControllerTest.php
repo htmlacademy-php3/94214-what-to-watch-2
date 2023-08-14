@@ -56,10 +56,14 @@ class FilmControllerTest extends TestCase
         $response = $this->getJson('/api/films');
 
         $response->assertStatus(Response::HTTP_OK);
-        $response->assertJsonCount(8, 'data');
+        $response->assertJsonCount(config('pagination.films_per_page'), 'data');
         $response->assertJsonStructure([
             'data' => [
-                '*' => $this->getTypicalFilmStructure(),
+                '*' => [
+                    'id',
+                    'name',
+                    'preview_image',
+                ],
             ],
             'current_page',
             'first_page_url',
@@ -76,9 +80,11 @@ class FilmControllerTest extends TestCase
     public function testIndexFilteredByGenre(): void
     {
         $genre = Genre::factory()->create();
-        Film::factory()->count(5)->create(['status' => Film::STATUS_READY])->each(function ($film) use ($genre) {
-            $film->genres()->attach($genre);
-        });
+
+        Film::factory()
+            ->count(5)
+            ->hasAttached($genre)
+            ->create(['status' => Film::STATUS_READY]);
 
         $response = $this->getJson('/api/films?genre=' . $genre->name);
 
@@ -268,8 +274,8 @@ class FilmControllerTest extends TestCase
     }
 
     /**
-    * Тест на создание фильма, который уже существует.
-    */
+     * Тест на создание фильма, который уже существует.
+     */
     public function testStoreFilmAlreadyExists(): void
     {
         $user = User::factory()->create([
@@ -298,8 +304,8 @@ class FilmControllerTest extends TestCase
     }
 
     /**
-    * Тест на создание фильма с некорректными данными.
-    */
+     * Тест на создание фильма с некорректными данными.
+     */
     public function testStoreValidationError(): void
     {
         $user = User::factory()->create([
@@ -322,8 +328,8 @@ class FilmControllerTest extends TestCase
     }
 
     /**
-    * Тест на получение информации о фильме.
-    */
+     * Тест на получение информации о фильме.
+     */
     public function testShowFilm(): void
     {
         $film = Film::factory()->create(['status' => Film::STATUS_READY]);
@@ -337,8 +343,8 @@ class FilmControllerTest extends TestCase
     }
 
     /**
-    * Тест на получение информации о фильме для авторизованного пользователя с отмеченным избранным статусом.
-    */
+     * Тест на получение информации о фильме для авторизованного пользователя с отмеченным избранным статусом.
+     */
     public function testShowFavoriteForAuthorized(): void
     {
         $user = User::factory()->create();
@@ -356,8 +362,8 @@ class FilmControllerTest extends TestCase
     }
 
     /**
-    * Тест на получение информации о фильме для гостя (неавторизованного пользователя).
-    */
+     * Тест на получение информации о фильме для гостя (неавторизованного пользователя).
+     */
     public function testShowFavoriteForGuest(): void
     {
         $film = Film::factory()->create(['status' => Film::STATUS_READY]);
@@ -372,8 +378,8 @@ class FilmControllerTest extends TestCase
     }
 
     /**
-    * Тест на обновление фильма без авторизации.
-    */
+     * Тест на обновление фильма без авторизации.
+     */
     public function testUpdateUnauthorized(): void
     {
         $film = Film::factory()->create(['status' => Film::STATUS_PENDING]);
@@ -395,8 +401,8 @@ class FilmControllerTest extends TestCase
     }
 
     /**
-    * Тест на обновление фильма с авторизованным пользователем без необходимых прав.
-    */
+     * Тест на обновление фильма с авторизованным пользователем без необходимых прав.
+     */
     public function testUpdateAuthorized(): void
     {
         $user = User::factory()->create();
@@ -420,8 +426,8 @@ class FilmControllerTest extends TestCase
     }
 
     /**
-    * Тест на обновление фильма с модератором, который имеет необходимые права.
-    */
+     * Тест на обновление фильма с модератором, который имеет необходимые права.
+     */
     public function testUpdateModerator(): void
     {
         $user = User::factory()->moderator()->create();
@@ -457,8 +463,8 @@ class FilmControllerTest extends TestCase
     }
 
     /**
-    * Тест на обновление фильма с некорректными данными.
-    */
+     * Тест на обновление фильма с некорректными данными.
+     */
     public function testUpdateValidationError(): void
     {
         $film = Film::factory()->create();

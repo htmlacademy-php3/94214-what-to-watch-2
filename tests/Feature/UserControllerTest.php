@@ -43,6 +43,25 @@ class UserControllerTest extends TestCase
     }
 
     /**
+     * Тестирование обновления данных пользователя гостем.
+     */
+    public function testUpdateUserDataByGuest(): void
+    {
+        $newName = 'Новое имя';
+        $newEmail = 'newemail@mail.ru';
+
+        $response = $this->patchJson('/api/user', [
+            'name' => $newName,
+            'email' => $newEmail,
+        ]);
+
+        $response->assertStatus(Response::HTTP_UNAUTHORIZED);
+        $response->assertJson([
+            'message' => 'Запрос требует аутентификации.',
+        ]);
+    }
+
+    /**
      * Тестирование обновления данных пользователя.
      */
     public function testUpdateUserData(): void
@@ -107,8 +126,8 @@ class UserControllerTest extends TestCase
 
         $response->assertStatus(Response::HTTP_OK);
 
-        $this->assertEquals('avatars/' . $avatar->hashName(), $user->avatar);
-        Storage::disk('local')->assertExists('avatars/' . $avatar->hashName());
+        $this->assertEquals(config('app.paths.avatar') . $avatar->hashName(), $user->avatar);
+        Storage::disk('local')->assertExists(config('app.paths.avatar') . $avatar->hashName());
     }
 
     /**

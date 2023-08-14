@@ -212,4 +212,8 @@ return [
         // 'ExampleClass' => App\Example\ExampleClass::class,
     ])->toArray(),
 
+    'paths' => [
+        'avatar' => env('AVATAR_PATH', 'public/avatars/'),
+    ]
+
 ];

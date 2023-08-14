@@ -2,16 +2,16 @@
 
 namespace App\Http\Controllers;
 
+use App\Http\Requests\CommentRequest;
 use App\Http\Responses\BaseResponse;
 use App\Http\Responses\FailResponse;
 use App\Http\Responses\SuccessResponse;
-use App\Models\User;
 use App\Models\Comment;
 use App\Models\Film;
-use App\Http\Requests\CommentRequest;
+use App\Models\User;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Gate;
 use Symfony\Component\HttpFoundation\Response;
 
 class CommentController extends Controller
@@ -23,12 +23,8 @@ class CommentController extends Controller
      */
     public function index(Film $film): BaseResponse
     {
-        try {
-            $comments = $film->comments()->get();
-            return new SuccessResponse($comments);
-        } catch (\Exception $e) {
-            return new FailResponse(null, null, $e);
-        }
+        $comments = $film->comments()->get();
+        return new SuccessResponse($comments);
     }
 
     /**
@@ -38,21 +34,19 @@ class CommentController extends Controller
      */
     public function store(CommentRequest $request, Film $film): BaseResponse
     {
-        try {
-            /** @var User|null $user */
-            $user = Auth::user();
+        /** @var User|null $user */
+        $user = Auth::user();
 
-            $comment = $film->comments()->create([
-                'comment_id' => $request->get('comment_id', null),
-                'text' => $request->input('text'),
-                'rating' => $request->input('rating'),
-                'user_id' => $user->id,
-            ]);
+        $comment = $film->comments()->create([
+            'comment_id' => $request->get('comment_id', null),
+            'text' => $request->input('text'),
+            'rating' => $request->input('rating'),
+            'user_id' => $user->id,
+        ]);
 
-            return new SuccessResponse($comment);
-        } catch (\Exception $e) {
-            return new FailResponse(null, null, $e);
-        }
+        $film->calculateRating();
+
+        return new SuccessResponse($comment);
     }
 
     /**
@@ -66,16 +60,15 @@ class CommentController extends Controller
             return new FailResponse('Недостаточно прав.', Response::HTTP_FORBIDDEN);
         }
 
-        try {
-            $comment->update([
-                'text' => $request->input('text'),
-                'rating' => $request->input('rating'),
-            ]);
+        $comment->update([
+            'text' => $request->input('text'),
+            'rating' => $request->input('rating'),
+        ]);
 
-            return new SuccessResponse($comment);
-        } catch (\Exception $e) {
-            return new FailResponse(null, null, $e);
-        }
+        $film = $comment->film;
+        $film->calculateRating();
+
+        return new SuccessResponse($comment);
     }
 
     /**
@@ -89,15 +82,12 @@ class CommentController extends Controller
             return new FailResponse('Недостаточно прав.', Response::HTTP_FORBIDDEN);
         }
 
-        try {
-            if ($comment->children()->count() > 0) {
-                $comment->children()->delete();
-            }
-            $comment->delete();
+        $comment->children()->delete();
+        $comment->delete();
 
-            return new SuccessResponse(null, Response::HTTP_NO_CONTENT);
-        } catch (\Exception $e) {
-            return new FailResponse(null, null, $e);
-        }
+        $film = $comment->film;
+        $film->calculateRating();
+
+        return new SuccessResponse(null, Response::HTTP_NO_CONTENT);
     }
 }

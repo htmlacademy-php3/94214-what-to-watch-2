@@ -3,6 +3,7 @@
 namespace App\Jobs;
 
 use App\Models\Film;
+use App\Services\MovieService\MovieAcademyRepository;
 use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Bus\Dispatchable;
@@ -21,14 +22,18 @@ class UpdateCommentsForAllFilmJob implements ShouldQueue
      *
      * @return void
      */
-    public function handle()
+    public function handle(MovieAcademyRepository $repository)
     {
-        $delayTime = 0;
-        $intervalInSeconds = 3;
+        $newComments = $repository->getNewComments();
 
-        Film::all()->each(function ($film) use (&$delayTime, $intervalInSeconds) {
-            UpdateCommentsForFilmJob::dispatch($film)->delay(now()->addSeconds($delayTime));
-            $delayTime += $intervalInSeconds;
+        $filmsWithNewComments = Film::whereIn('imdb_id', array_column($newComments, 'imdb_id'))->get();
+
+        $filmsWithNewComments->each(function ($film) use ($newComments) {
+            $commentsForThisFilm = array_filter($newComments, function ($comment) use ($film) {
+                return $comment['imdb_id'] == $film->imdb_id;
+            });
+
+            UpdateCommentsForFilmJob::dispatch($film, $commentsForThisFilm);
         });
     }
 }

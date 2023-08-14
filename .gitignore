@@ -18,3 +18,6 @@ yarn-error.log
 /.idea
 /.vscode
 answerExample.json
+phpunit.xml
+.bashrc
+public_html
